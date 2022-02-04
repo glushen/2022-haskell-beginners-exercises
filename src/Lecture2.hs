@@ -260,7 +260,7 @@ True
 -}
 isIncreasing :: [Int] -> Bool
 isIncreasing list = case list of
-    x : y : xs -> x < y && isIncreasing (y : ys)
+    x1 : x2 : xs -> x1 < x2 && isIncreasing (x2 : xs)
     _ -> True
 
 {- | Implement a function that takes two lists, sorted in the
@@ -277,8 +277,9 @@ merge :: [Int] -> [Int] -> [Int]
 merge a b = case (a, b) of
     (_, []) -> a
     ([], _) -> b
-    ((x:xs), (y:_)) | x <= y -> x : (merge xs b)
-    ((_:_), (y:ys)) -> y : (merge a ys)
+    (x : xs, y : ys) | x == y -> x : y : (merge xs ys)
+    (x : xs, y : _) | x < y -> x : (merge xs b)
+    (_ : _, y : ys) -> y : (merge a ys)
 
 {- | Implement the "Merge Sort" algorithm in Haskell. The @mergeSort@
 function takes a list of numbers and returns a new list containing the
@@ -298,8 +299,8 @@ mergeSort :: [Int] -> [Int]
 mergeSort list = case list of
     [] -> list
     [_] -> list
-    _ -> merge (mergeSort (take l2 list)) (mergeSort (drop l2 list))
-        where l2 = div (length list) 2
+    _ -> merge (mergeSort l) (mergeSort r)
+        where (l, r) = splitAt (div (length list) 2) list
 
 
 {- | Haskell is famous for being a superb language for implementing
