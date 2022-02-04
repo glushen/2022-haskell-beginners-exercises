@@ -41,7 +41,7 @@ module Lecture2
     ) where
 
 -- VVV If you need to import libraries, do it after this line ... VVV
-
+import Data.Char
 -- ^^^ and before this line. Otherwise the test suite might fail  ^^^
 
 {- | Implement a function that finds a product of all the numbers in
@@ -52,7 +52,10 @@ zero, you can stop calculating product and return 0 immediately.
 84
 -}
 lazyProduct :: [Int] -> Int
-lazyProduct = error "TODO"
+lazyProduct list = case list of
+    [] -> 1
+    0 : _ -> 0
+    x : xs -> x * lazyProduct xs
 
 {- | Implement a function that duplicates every element in the list.
 
@@ -62,7 +65,9 @@ lazyProduct = error "TODO"
 "ccaabb"
 -}
 duplicate :: [a] -> [a]
-duplicate = error "TODO"
+duplicate list = case list of
+    [] -> []
+    (x:xs) -> (x:x:duplicate xs)
 
 {- | Implement function that takes index and a list and removes the
 element at the given position. Additionally, this function should also
@@ -74,7 +79,14 @@ return the removed element.
 >>> removeAt 10 [1 .. 5]
 (Nothing,[1,2,3,4,5])
 -}
-removeAt = error "TODO"
+removeAt :: Int -> [a] -> (Maybe a, [a])
+removeAt index list = case (index, list) of
+    (_, []) -> (Nothing, [])
+    (i, l) | i < 0 -> (Nothing, l)
+    (0, (x:xs)) -> (Just x, xs)
+    (i, (x:xs)) ->
+        let (r, l) = removeAt (i-1) xs
+        in (r, x:l)
 
 {- | Write a function that takes a list of lists and returns only
 lists of even lengths.
@@ -85,7 +97,8 @@ lists of even lengths.
 ♫ NOTE: Use eta-reduction and function composition (the dot (.) operator)
   in this function.
 -}
-evenLists = error "TODO"
+evenLists :: [[a]] -> [[a]]
+evenLists = filter (even . length)
 
 {- | The @dropSpaces@ function takes a string containing a single word
 or number surrounded by spaces and removes all leading and trailing
@@ -101,7 +114,8 @@ spaces.
 
 🕯 HINT: look into Data.Char and Prelude modules for functions you may use.
 -}
-dropSpaces = error "TODO"
+dropSpaces :: String -> String
+dropSpaces = takeWhile (not . isSpace) . dropWhile isSpace
 
 {- |
 
@@ -164,7 +178,69 @@ data Knight = Knight
     , knightEndurance :: Int
     }
 
-dragonFight = error "TODO"
+data Chest a = Chest {
+    chestGold :: Int,
+    chestTreasure :: Maybe a
+}
+
+data Reward a = Reward {
+    rewardChest :: Chest a,
+    rewardExperience :: Int
+}
+
+data DragonType = DragonRed | DragonBlack | DragonGreen
+
+data Dragon = Dragon {
+    dragonType :: DragonType,
+    dragonHealth :: Int,
+    dragonFirePower :: Int
+}
+
+computeExperience :: DragonType -> Int
+computeExperience dragonType = case dragonType of
+    DragonRed -> 100
+    DragonBlack -> 150
+    DragonGreen -> 250
+
+digestChest :: DragonType -> Chest a -> Chest a
+digestChest dragon chest = case dragon of
+    DragonGreen -> chest { chestTreasure = Nothing }
+    _ -> chest
+
+divRoundUp :: Int -> Int -> Int
+divRoundUp x y = case mod x y of
+    0 -> div x y
+    _ -> (+) (div x y) 1
+
+swordStrikeCountToWin :: Knight -> Dragon -> Int
+swordStrikeCountToWin knight dragon =
+    divRoundUp (dragonHealth dragon) (knightAttack knight)
+
+swordStrikeCountBeforeDie :: Knight -> Dragon -> Int
+swordStrikeCountBeforeDie knight dragon =
+    (*) (divRoundUp (knightHealth knight) (dragonFirePower dragon)) 10
+
+swordStrikeCountBeforeRunAway :: Knight -> Int
+swordStrikeCountBeforeRunAway = knightEndurance
+
+data FightResult a
+    = FightResultDragonSlayed (Reward a)
+    | FightResultKnightIsDead
+    | FightResultKnightHasRunAway
+
+dragonFight :: Knight -> Dragon -> Chest a -> FightResult a
+dragonFight knight dragon chest
+    | mn == toWin = FightResultDragonSlayed reward
+    | mn == beforeDie = FightResultKnightIsDead
+    | otherwise = FightResultKnightHasRunAway
+    where
+        toWin = swordStrikeCountToWin knight dragon
+        beforeDie = swordStrikeCountBeforeDie knight dragon
+        beforeRunAway = swordStrikeCountBeforeRunAway knight
+        mn = min toWin (min beforeDie beforeRunAway)
+        rewardChest = digestChest (dragonType dragon) chest
+        rewardExp = computeExperience (dragonType dragon)
+        reward = Reward rewardChest rewardExp
 
 ----------------------------------------------------------------------------
 -- Extra Challenges
@@ -185,7 +261,9 @@ False
 True
 -}
 isIncreasing :: [Int] -> Bool
-isIncreasing = error "TODO"
+isIncreasing list = case list of
+    x1 : x2 : xs -> x1 < x2 && isIncreasing (x2 : xs)
+    _ -> True
 
 {- | Implement a function that takes two lists, sorted in the
 increasing order, and merges them into new list, also sorted in the
@@ -198,7 +276,12 @@ verify that.
 [1,2,3,4,7]
 -}
 merge :: [Int] -> [Int] -> [Int]
-merge = error "TODO"
+merge a b = case (a, b) of
+    (_, []) -> a
+    ([], _) -> b
+    (x : xs, y : ys) | x == y -> x : y : (merge xs ys)
+    (x : xs, y : _) | x < y -> x : (merge xs b)
+    (_ : _, y : ys) -> y : (merge a ys)
 
 {- | Implement the "Merge Sort" algorithm in Haskell. The @mergeSort@
 function takes a list of numbers and returns a new list containing the
@@ -215,7 +298,11 @@ The algorithm of merge sort is the following:
 [1,2,3]
 -}
 mergeSort :: [Int] -> [Int]
-mergeSort = error "TODO"
+mergeSort list = case list of
+    [] -> list
+    [_] -> list
+    _ -> merge (mergeSort l) (mergeSort r)
+        where (l, r) = splitAt (div (length list) 2) list
 
 
 {- | Haskell is famous for being a superb language for implementing
@@ -268,7 +355,21 @@ data EvalError
 It returns either a successful evaluation result or an error.
 -}
 eval :: Variables -> Expr -> Either EvalError Int
-eval = error "TODO"
+eval vars expr = case expr of
+    Lit x -> Right x
+    Var sx ->
+        let mx = lookup sx vars
+        in case mx of
+            Just x -> Right x
+            Nothing -> Left (VariableNotFound sx)
+    Add l r ->
+        let lRes = eval vars l
+            rRes = eval vars r
+        in case (lRes, rRes) of
+            (Left err, _) -> Left err
+            (_, Left err) -> Left err
+            (Right lx, Right rx) -> Right (lx + rx)
+
 
 {- | Compilers also perform optimizations! One of the most common
 optimizations is "Constant Folding". It performs arithmetic operations
@@ -292,4 +393,28 @@ Write a function that takes and expression and performs "Constant
 Folding" optimization on the given expression.
 -}
 constantFolding :: Expr -> Expr
-constantFolding = error "TODO"
+constantFolding expr = case expr of
+    Lit x -> Lit x
+    Var s -> Var s
+    Add lp rp ->
+        let l = constantFolding lp
+            r = constantFolding rp
+            decompose e = case e of
+                Lit x -> (Nothing, x)
+                Var s -> (Just (Var s), 0)
+                Add (Lit x) (Lit y) -> (Nothing, x+y)
+                Add (Lit x) ey -> (Just ey, x)
+                Add ex (Lit y) -> (Just ex, y)
+                _ -> (Just e, 0)
+            (el, cl) = decompose l
+            (er, cr) = decompose r
+            c = cl + cr
+        in case (el, er, c) of
+            (Nothing, Nothing, x) -> Lit x
+            (Just e, Nothing, 0) -> e
+            (Nothing, Just e, 0) -> e
+            (Just e, Nothing, x) -> Add e (Lit x)
+            (Nothing, Just e, x) -> Add e (Lit x)
+            (Just e1, Just e2, 0) -> Add e1 e2
+            (Just e1, Just e2, x) -> Add (Add e1 e2) (Lit x)
+            
