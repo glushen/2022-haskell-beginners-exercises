@@ -52,8 +52,8 @@ zero, you can stop calculating product and return 0 immediately.
 lazyProduct :: [Int] -> Int
 lazyProduct list = case list of
     [] -> 1
-    (0:_) -> 0
-    (x:xs) -> x * lazyProduct(xs)
+    0 : _ -> 0
+    x : xs -> x * lazyProduct xs
 
 {- | Implement a function that duplicates every element in the list.
 
