@@ -260,8 +260,7 @@ True
 -}
 isIncreasing :: [Int] -> Bool
 isIncreasing list = case list of
-    (x:y:_) | x > y -> False
-    (_:y:ys) -> isIncreasing (y:ys)
+    x : y : xs -> x < y && isIncreasing (y : ys)
     _ -> True
 
 {- | Implement a function that takes two lists, sorted in the
