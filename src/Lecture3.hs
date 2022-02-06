@@ -185,10 +185,9 @@ monsters, you should get a combined treasure and not just the first
 instance (Semigroup a) => Semigroup (Treasure a) where
     (<>) :: Treasure a -> Treasure a -> Treasure a
     (<>) x y = case (x, y) of
-        (NoTreasure, NoTreasure) -> NoTreasure
-        (SomeTreasure t, NoTreasure) -> SomeTreasure t
-        (NoTreasure, SomeTreasure t) -> SomeTreasure t
         (SomeTreasure xt, SomeTreasure yt) -> SomeTreasure (xt <> yt)
+        (NoTreasure, z) -> z
+        (z, NoTreasure) -> z
 
 
 instance (Semigroup a) => Monoid (Treasure a) where
