@@ -299,4 +299,4 @@ Just [8,9,10]
 
 -}
 apply :: Functor f => a -> f (a -> a) -> f a
-apply x functor = fmap (\g -> g x) functor
+apply x = fmap (\g -> g x)
