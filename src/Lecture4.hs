@@ -145,14 +145,13 @@ split sep list = let (xs, ys) = span (/= sep) list
     in if null ys then [xs] else xs : split sep (drop 1 ys)
 
 parseRow :: String -> Maybe Row
-parseRow s = case split ',' s of
-    _:_:_:_:_ -> Nothing
-    s1:s2:s3:_ -> (if null s1 then Nothing else Just s1)
-        >>= \v1 -> readMaybe s2
-        >>= \v2 -> readMaybe s3
-        >>= \t3 -> if t3 < 0 then Nothing else Just t3
-        >>= \v3 -> Just (Row v1 v2 v3)
-    _ -> Nothing
+parseRow s = do
+    [v1, s2, s3] <- Just (split ',' s)
+    guard (v1 /= "")
+    v2 <- readMaybe s2
+    v3 <- readMaybe s3
+    guard (v3 >= 0)
+    Just (Row v1 v2 v3)
 
 {-
 We have almost all we need to calculate final stats in a simple and
