@@ -109,6 +109,7 @@ import Text.Read (readMaybe)
 import Data.List (elemIndex, foldl')
 import Data.Maybe (mapMaybe)
 import System.Environment (getArgs)
+import Control.Monad (guard)
 
 {- In this exercise, instead of writing the entire program from
 scratch, you're offered to complete the missing parts.
