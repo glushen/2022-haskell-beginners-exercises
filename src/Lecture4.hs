@@ -226,11 +226,9 @@ instance Semigroup Stats where
         (statsLongest a <> statsLongest b)
 
 combine :: Semigroup a => Maybe a -> Maybe a -> Maybe a
-combine x y = case (x, y) of
-    (Just !u, Just !v) -> Just (u <> v)
-    (Just !u, Nothing) -> Just u
-    (Nothing, Just !v) -> Just v
-    (Nothing, Nothing) -> Nothing
+combine x y = case x <> y of
+    Nothing -> Nothing
+    Just !v -> Just v
 
 {-
 The reason for having the 'Stats' data type is to be able to convert
