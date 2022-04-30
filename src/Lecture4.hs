@@ -141,10 +141,8 @@ errors. We will simply return an optional result here.
 -}
 
 split :: Eq a => a -> [a] -> [[a]]
-split sep list = case elemIndex sep list of
-    Just i -> let (xs, ys) = splitAt i list
-        in xs : split sep (drop 1 ys)
-    Nothing -> [list]
+split sep list = let (xs, ys) = span (/= sep) list
+    in if null ys then [xs] else xs : split sep (drop 1 ys)
 
 parseRow :: String -> Maybe Row
 parseRow s = case split ',' s of
