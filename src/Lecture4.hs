@@ -81,6 +81,9 @@ errors. You can just ignore invalid rows.
 Exercises for Lecture 4 also contain tests and you can run them as usual.
 -}
 
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE StrictData #-}
+
 module Lecture4
     ( -- * Main running function
       main
@@ -100,9 +103,13 @@ module Lecture4
     , printProductStats
     ) where
 
-import Data.List.NonEmpty (NonEmpty (..))
-import Data.Semigroup (Max (..), Min (..), Semigroup (..), Sum (..))
+import Data.List.NonEmpty (NonEmpty (..), nonEmpty)
+import Data.Semigroup (Max (..), Min (..), Sum (..))
 import Text.Read (readMaybe)
+import Data.List (elemIndex, foldl')
+import Data.Maybe (mapMaybe)
+import System.Environment (getArgs)
+import Control.Monad (guard)
 
 {- In this exercise, instead of writing the entire program from
 scratch, you're offered to complete the missing parts.
@@ -134,8 +141,18 @@ errors. We will simply return an optional result here.
 🕯 HINT: Use the 'readMaybe' function from the 'Text.Read' module.
 -}
 
+split :: Eq a => a -> [a] -> [[a]]
+split sep list = let (xs, ys) = span (/= sep) list
+    in if null ys then [xs] else xs : split sep (drop 1 ys)
+
 parseRow :: String -> Maybe Row
-parseRow = error "TODO"
+parseRow s = do
+    [v1, s2, s3] <- Just (split ',' s)
+    guard (v1 /= "")
+    v2 <- readMaybe s2
+    v3 <- readMaybe s3
+    guard (v3 >= 0)
+    Just (Row v1 v2 v3)
 
 {-
 We have almost all we need to calculate final stats in a simple and
@@ -157,6 +174,19 @@ string.
 If both strings have the same length, return the first one.
 -}
 instance Semigroup MaxLen where
+    (<>) :: MaxLen -> MaxLen -> MaxLen
+    a <> b = MaxLen (longest (unMaxLen a) (unMaxLen b))
+
+longest :: [a] -> [a] -> [a]
+longest l1 l2 = case longestEither l1 l2 of
+    Left _ -> l1
+    Right _ -> l2
+
+longestEither :: [a] -> [a] -> Either () ()
+longestEither l1 l2 = case (l1, l2) of
+    (_, []) -> Left ()
+    ([], _) -> Right ()
+    (_:xs, _:ys) -> longestEither xs ys
 
 
 {-
@@ -184,7 +214,22 @@ instance for the 'Stats' type itself.
 -}
 
 instance Semigroup Stats where
+    (<>) :: Stats -> Stats -> Stats
+    a <> b = Stats
+        (statsTotalPositions a <> statsTotalPositions b)
+        (statsTotalSum a <> statsTotalSum b)
+        (statsAbsoluteMax a <> statsAbsoluteMax b)
+        (statsAbsoluteMin a <> statsAbsoluteMin b)
+        (statsSellMax a `combine` statsSellMax b)
+        (statsSellMin a `combine` statsSellMin b)
+        (statsBuyMax a `combine` statsBuyMax b)
+        (statsBuyMin a `combine` statsBuyMin b)
+        (statsLongest a <> statsLongest b)
 
+combine :: Semigroup a => Maybe a -> Maybe a -> Maybe a
+combine x y = case x <> y of
+    Nothing -> Nothing
+    Just !v -> Just v
 
 {-
 The reason for having the 'Stats' data type is to be able to convert
@@ -200,7 +245,34 @@ row in the file.
 -}
 
 rowToStats :: Row -> Stats
-rowToStats = error "TODO"
+rowToStats row = Stats
+    (Sum 1)
+    (case tradeType of
+        Buy -> Sum (-cost)
+        Sell -> Sum cost
+    )
+    (Max cost)
+    (Min cost)
+    (case tradeType of
+        Buy -> Nothing
+        Sell -> Just (Max cost)
+    )
+    (case tradeType of
+        Buy -> Nothing
+        Sell -> Just (Min cost)
+    )
+    (case tradeType of
+        Buy -> Just (Max cost)
+        Sell -> Nothing
+    )
+    (case tradeType of
+        Buy -> Just (Min cost)
+        Sell -> Nothing
+    )
+    (MaxLen (rowProduct row))
+    where
+        tradeType = rowTradeType row
+        cost = rowCost row
 
 {-
 Now, after we learned to convert a single row, we can convert a list of rows!
@@ -226,7 +298,7 @@ implement the next task.
 -}
 
 combineRows :: NonEmpty Row -> Stats
-combineRows = error "TODO"
+combineRows (row :| rows) = foldl' (\stats r -> stats <> rowToStats r) (rowToStats row) rows
 
 {-
 After we've calculated stats for all rows, we can then pretty-print
@@ -237,7 +309,16 @@ you can return string "no value"
 -}
 
 displayStats :: Stats -> String
-displayStats = error "TODO"
+displayStats stats =
+       "Total positions:       : " ++ (show . getSum . statsTotalPositions) stats ++ "\n"
+    ++ "Total final balance    : " ++ (show . getSum . statsTotalSum) stats ++ "\n"
+    ++ "Biggest absolute cost  : " ++ (show . getMax . statsAbsoluteMax) stats ++ "\n"
+    ++ "Smallest absolute cost : " ++ (show . getMin . statsAbsoluteMin) stats ++ "\n"
+    ++ "Max earning            : " ++ maybe "no value" (show . getMax) (statsSellMax stats) ++ "\n"
+    ++ "Min earning            : " ++ maybe "no value" (show . getMin) (statsSellMin stats) ++ "\n"
+    ++ "Max spending           : " ++ maybe "no value" (show . getMax) (statsBuyMax stats) ++ "\n"
+    ++ "Min spending           : " ++ maybe "no value" (show . getMin) (statsBuyMin stats) ++ "\n"
+    ++ "Longest product name   : " ++ (unMaxLen . statsLongest) stats
 
 {-
 Now, we definitely have all the pieces in places! We can write a
@@ -257,7 +338,10 @@ the file doesn't have any products.
 -}
 
 calculateStats :: String -> String
-calculateStats = error "TODO"
+calculateStats str = maybe "File doesn't have any products." (displayStats . combineRows) (nonEmpty (parseRows str))
+
+parseRows :: String -> [Row]
+parseRows str = mapMaybe parseRow (lines str)
 
 {- The only thing left is to write a function with side-effects that
 takes a path to a file, reads its content, calculates stats and prints
@@ -267,7 +351,9 @@ Use functions 'readFile' and 'putStrLn' here.
 -}
 
 printProductStats :: FilePath -> IO ()
-printProductStats = error "TODO"
+printProductStats path = do
+    str <- readFile path
+    putStrLn (calculateStats str)
 
 {-
 Okay, I lied. This is not the last thing. Now, we need to wrap
@@ -283,7 +369,11 @@ https://hackage.haskell.org/package/base-4.16.0.0/docs/System-Environment.html#v
 -}
 
 main :: IO ()
-main = error "TODO"
+main = do
+    args <- getArgs
+    case args of
+        path:_ -> printProductStats path
+        _ -> putStrLn "No command line arguments."
 
 
 {-
